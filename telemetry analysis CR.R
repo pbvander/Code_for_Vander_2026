@@ -441,7 +441,7 @@ save_plot("E2 CR torpor time",w=2.7,h=3.1)
 write_source_data_tdf(tdf, "E2_CR_", group_var = "pellet", add_cols = c("food_intake"="food_intake"))
 
 measures<-c("deltaT","bouts","stdev","hIndex","time_to_torpor")
-labels<-c("Max Δ (Deg. C)", "Bouts (#)", "Std dev (Deg. C)","Mean Δ (Deg. C)","Latency (hours)")
+labels<-c("Max ΔT (Deg. C)", "Bouts (#)", "Std dev (Deg. C)","Mean ΔT (Deg. C)","Latency (hours)")
 stat_labels<-c("max_delta", "bouts", "std_dev", "mean_delta", "latency")
 i=1
 for (measure in measures){
@@ -578,7 +578,13 @@ p4+
 save_plot("torpor time temp change", w=6,h=4)
 
 ######Bout timing
-set<-list(labs(x="Zeitgeber time (hours)",y="Bout duration (minutes)"),#,title="Timing , duration ")+
+bouts<-(format_data_raleigh(bdf%>%filter(gonad=="ovx"), "pellet")$points)%>%group_by(mouse,pellet,bout_id)%>%summarize(midpoint_zt=mean(start_stop_zt), duration=mean(duration))
+bout_timing_lme<-anova(lme(data=bouts, fixed = midpoint_zt ~ pellet, random=~1|mouse))
+stat_save(bout_timing_lme, "E2_CR_")
+bout_duration_lme<-anova(lme(data=bouts, fixed = duration ~ pellet, random=~1|mouse))
+stat_save(bout_duration_lme, "E2_CR_")
+
+set<-list(labs(x="Zeitgeber time (hours)",y="Bout duration (minutes)", title="Bout duration ns, bout timing ns"),
           scale_color_manual(values=post_ovx_scale2),
           ms,
           theme(axis.line=element_blank(),
@@ -587,7 +593,7 @@ set<-list(labs(x="Zeitgeber time (hours)",y="Bout duration (minutes)"),#,title="
                     strip.text.x=element_text(size=12,face="bold"),
                     plot.title=element_text(size=12, hjust=0,margin=margin(t=0,b=5,l=0,r=0)),
           panel.spacing.y=unit(0.2,"in")))
-hline<-geom_hline(data=tibble("pellet"=c("OVX+Vehicle","OVX+E2"),"yintercept"=c(600,300))%>%mutate(pellet=factor(pellet,levels=c("OVX+Vehicle","OVX+E2"))),color="red",aes(yintercept=yintercept))
+hline<-geom_hline(data=tibble("pellet"=c("OVX+Vehicle","OVX+E2"),"yintercept"=c(500,500))%>%mutate(pellet=factor(pellet,levels=c("OVX+Vehicle","OVX+E2"))),color="red",aes(yintercept=yintercept))
 
 p<-format_data_raleigh(bdf%>%filter(gonad=="ovx"),"pellet")%>%plot_raleigh("pellet",hline_increment = 250)+set+hline
 p+facet_wrap(vars(pellet),axes="all",nrow=1)
@@ -595,11 +601,11 @@ save_plot("E2 CR torpor timing",w=5,h=3)
 
 write_source_data_raleigh(p$data, "E2_CR_", group_var = "pellet")
 
-p<-format_data_raleigh(bdf%>%filter(gonad=="ovx"),"pellet")%>%plot_raleigh("pellet",hline_increment = 250,y_max=0.51)+set+hline
+p<-format_data_raleigh(bdf%>%filter(gonad=="ovx"),"pellet")%>%plot_raleigh("pellet",hline_increment = 250,y_max=0.43)+set+hline
 p+facet_wrap(vars(pellet),axes="all",nrow=1)
 save_plot("E2 CR torpor timing zoom y",w=5,h=3)
 
-p<-format_data_raleigh(bdf%>%filter(gonad=="ovx"),"pellet")%>%plot_raleigh("pellet",hline_increment = 250,y_max=0.255)+set+hline
+p<-format_data_raleigh(bdf%>%filter(gonad=="ovx"),"pellet")%>%plot_raleigh("pellet",hline_increment = 250,y_max=0.43)+set+hline
 p+facet_wrap(vars(pellet),axes="all",nrow=1)
 save_plot("E2 CR torpor timing more zoom y",w=5,h=3)
 
@@ -691,7 +697,7 @@ p
 save_plot("torpor time by weight",w=5,h=4.5)
 
 p<-ggplot(tdf%>%filter(gonad=="ovx"),aes(x=pre_fast_weight,y=time))+ms+cs1+
-  labs(y="Time in deep torpor (hours)",x="Body weight (g)", title="Treatment*, body weight*")+
+  labs(y="Time in deep torpor (hours)",x="Body weight (g)", title="Treatment *, body weight *")+
   coord_cartesian(ylim=c(0,NA))+
   scale_y_continuous(expand=c(0.05,0.05))+
   theme(text=element_text(size=12),
@@ -798,12 +804,12 @@ ggplot(mdf ,aes(x=pellet, y=food_intake))+
   # geom_line(aes(group=mouse),color="grey",size=1)+
   point_indiv()+
   coord_cartesian(ylim=c(0,NA))+
-  labs(y="Food intake (g/day)",x=element_blank(),title="Post-OVX + pre-treatment")+
+  labs(y="Food intake (g/day)",x=element_blank(),title="Post-OVX, pre-treatment")+
   draw_pvalue(data=fi_ttest, label="p.signif")+
   scale_color_manual(values=pellet_scale)+
   ms+
   theme(legend.position = "none",text=element_text(size=12),
-        plot.title=element_text(size=12,hjust=0.5,margin = margin(t=0,b=5,l=0,r=0)))
+        plot.title=element_text(size=12,hjust=0.5,margin = margin(t=0,b=5,l=-8,r=0)))
 save_plot("food intake", w=4,h=4.5)
 save_plot("E2 CR food intake", w=2.7,h=3.45)
 
@@ -819,7 +825,7 @@ ggplot(mdf%>%filter(!is.na(uterine_weight)),aes(x=pellet, y=uterine_weight))+
   point_summary(aes(color=pellet,shape=pellet))+
   point_indiv()+
   # geom_hline(yintercept=100,linetype="dotdash",size=1)+
-  labs(y="Uterus weight (mg)",x=element_blank())+
+  labs(y="Uterine weight (mg)",x=element_blank())+
   scale_color_manual(values=pellet_scale)+
   draw_pvalue(data=ut_ttest, label="p.signif")+
   ms+
@@ -857,11 +863,14 @@ files<-c("E2_CR_df_sourcedata.csv",
          "E2_CR_uterus-weight_ttest.csv",
          "E2_CR_body-weight_ttest.csv",
          "E2_CR_delta-body-weight_ttest.csv",
+         "E2_CR_food-intake_ttest.csv",
          "E2_CR_max_delta_ttest.csv",
          "E2_CR_mean_delta_ttest.csv",
          "E2_CR_std_dev_ttest.csv",
          "E2_CR_latency_ttest.csv",
-         "E2_CR_bouts_ttest.csv"
+         "E2_CR_bouts_ttest.csv",
+         "E2_CR_bout_duration_lme.csv",
+         "E2_CR_bout_timing_lme.csv"
 )
 
 for (file in files){

@@ -23,12 +23,29 @@ format_data_raleigh <- function(data, facet_var, fstart_hour=10, lon_hour=7){
   return(d)
 }
 
+add_tsi <- function(data, y_var="temp", time_col="chron", animal_col="mouse", output_col = "tsi_", windows, window_units="minutes"){
+  for (window in windows){
+    if (window_units=="minutes" & "chron" %in% class(data[[time_col]])){wnd<-window/(24*60)
+    }else{stop("check that time_col and windows_units are set correctly")}
+    col_name<-paste0(output_col,window)
+    
+    data<-data%>%group_by(.data[[animal_col]])%>%
+      mutate(!!col_name :=slide_index_dbl(
+        .x=.data[[y_var]],
+        .i=.data[[time_col]],
+        .f= ~ exp(-sd(.x, na.rm=T)),
+        .before=wnd/2,
+        .after=wnd/2,
+        .complete=F
+      ))
+  }
+  return(data)
+}
+
 ##Saving plots/data
 save_plot<- function(name, plot=last_plot(), direc="./output/",w=NA,h=NA,units="in", ...){
   # print("Saving pdf...")
-  cairo_pdf(filename = paste0(direc,name,".pdf"), width = w, height = h)
-  print(plot)
-  dev.off()
+  ggsave(filename = paste0(direc,name,".pdf"), plot = plot, width=w, height=h, units=units, device=cairo_pdf,...)
   # print("Saving svg...")
   ggsave(filename = paste0(direc,name,".svg"), plot = plot, width=w, height=h, units=units, ...)
   # print("Saving png...")
@@ -246,6 +263,15 @@ line_pair <- function(..., color="grey",seed=123,position=position_jitter(width=
 
 draw_pvalue <- function(..., data,label.size=12/.pt,bracket.size=1,fontface="bold"){
   stat_pvalue_manual(data=data,label.size=label.size,bracket.size=bracket.size, fontface=fontface,...)
+}
+
+p_to_stars <- function(p){
+  stars<-case_when(p>0.05 ~ "ns",
+                   p<0.0001 ~ "****",
+                   p<0.001 ~ "***",
+                   p<0.01 ~ "**",
+                   p<0.05 ~ "*")
+  return(stars)
 }
 
 annotate_pvalue <- function(..., geom="text",hjust=0,x=0,y=0,p,size=4.7,fontface="bold"){ #set p equal to cell in t_test where p-value is located!
